@@ -1,0 +1,20 @@
+{
+  "name": "oss-realtime",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node start.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^17.2.1",
+    "ioredis": "^5.7.0",
+    "redis": "^5.8.0"
+  },
+  "type": "commonjs",
+  "nx": {}
+}
