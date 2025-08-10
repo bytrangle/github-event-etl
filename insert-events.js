@@ -32,12 +32,18 @@ async function fetchPublicEvents() {
 
 // // Run the function
 fetchPublicEvents().then(async (res) => {
+  const botPattern = /(\[bot\]|-bot$)/;
   const eventStreamKey = getEventStreamKey();
   const devScoreKey = getDevScoreKey();
   try {
     // Process all events
     for (const event of res) {
       // Operation 1: Add event to the event stream
+      // Filter out bot events
+      if (event.actor && event.actor.display_login && botPattern.test(event.actor.display_login)) {
+        console.log(`Skipping bot event: ${event.id}`);
+        continue;
+      }
       const eventLogKey = getEventLogKey(event.id);
       try {
         const result = await redis.eval(
