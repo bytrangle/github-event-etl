@@ -7,11 +7,18 @@ const luaScript = fs.readFileSync(path.join(__dirname, 'insert-events-into-db.lu
 
 async function fetchPublicEvents() {
   try {    
+    const headers = {
+      'Accept': 'application/vnd.github+json',
+      'User-Agent': 'oss-realtime-app'
+    };
+    
+    // Add authorization header if GitHub token is available
+    if (process.env.GITHUB_TOKEN) {
+      headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`;
+    }
+    
     const response = await fetch('https://api.github.com/events?per_page=100', {
-      headers: {
-        'Accept': 'application/vnd.github+json',
-        'User-Agent': 'oss-realtime-app'
-      }
+      headers
     });
 
     if (!response.ok) {
