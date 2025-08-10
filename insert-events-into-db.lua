@@ -1,6 +1,5 @@
 local eventStreamKey = KEYS[1]
 local eventLogKey = KEYS[2]
-local devScoreKey = KEYS[3]
 local eventId = ARGV[1]
 local eventDataJSON = ARGV[2]
 local maxlen = tonumber(ARGV[3]) or 1000
@@ -38,14 +37,5 @@ local eventLogData = {
   created_at = eventData.created_at
 }
 redis.call('SET', eventLogKey, cjson.encode(eventLogData), 'EX', 300)
-
--- Check if event type is PushEvent or PullRequestEvent for dev scoring
-local eventType = eventData.type
-if eventType == 'PushEvent' or eventType == 'PullRequestEvent' then
-  local displayLogin = eventData.actor and eventData.actor.display_login
-  if displayLogin then
-    redis.call('ZINCRBY', devScoreKey, 1, displayLogin)
-  end
-end
 
 return 1

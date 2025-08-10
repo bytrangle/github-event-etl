@@ -1,7 +1,7 @@
 const redis = require('./client');
 const fs = require('fs');
 const path = require('path');
-const { getCreatedAtKey, getEventStreamKey, getEventLogKey, getDevScoreKey } = require('./redis-key-generator');
+const { getCreatedAtKey, getEventStreamKey, getEventLogKey } = require('./redis-key-generator');
 
 const luaScript = fs.readFileSync(path.join(__dirname, 'insert-events-into-db.lua'), 'utf8');
 
@@ -41,7 +41,6 @@ async function fetchPublicEvents() {
 fetchPublicEvents().then(async (res) => {
   const botPattern = /(\[bot\]|-bot$)/;
   const eventStreamKey = getEventStreamKey();
-  const devScoreKey = getDevScoreKey();
   try {
     // Process all events
     for (const event of res) {
@@ -55,10 +54,9 @@ fetchPublicEvents().then(async (res) => {
       try {
         const result = await redis.eval(
           luaScript,
-          3, // Number of keys (reduced from 4 to 3)
+          2, // Number of keys (reduced from 3 to 2)
           eventStreamKey, // KEY[1],
           eventLogKey, // KEY[2]
-          devScoreKey, // KEY[3]
           event.id, // ARGV[1]
           JSON.stringify(event), // ARGV[2]
           '1000'
