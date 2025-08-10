@@ -46,7 +46,7 @@ fetchPublicEvents().then(async (res) => {
     for (const event of res) {
       // Operation 1: Add event to the event stream
       // Filter out bot events
-      if (event.actor && event.actor.display_login && botPattern.test(event.actor.display_login)) {
+      if (event.actor && event.actor.login && botPattern.test(event.actor.login)) {
         console.log(`Skipping bot event: ${event.id}`);
         continue;
       }
