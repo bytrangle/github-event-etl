@@ -37,7 +37,7 @@ redis.call('XADD', eventStreamKey, 'MAXLEN', '~', maxlen, '*', unpack(xaddFields
 local eventLogData = {
   created_at = eventData.created_at
 }
-redis.call('SET', eventLogKey, cjson.encode(eventLogData))
+redis.call('SET', eventLogKey, cjson.encode(eventLogData), 'EX', 300)
 
 -- Check if event type is PushEvent or PullRequestEvent for dev scoring
 local eventType = eventData.type
