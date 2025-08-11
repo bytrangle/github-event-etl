@@ -1,6 +1,5 @@
 const PREFIX = 'github-events'
 const getKey = key => `${PREFIX}:${key}`;
-const getCreatedAtKey = () => getKey(`first-inserted-at`);
 const getEventStreamKey = () => getKey('event-stream');
 const getEventLogKey = (eventId) => getKey(`event-log:${eventId}`);
 const getRepoScoreKey = () => getKey(`repo-score`);
@@ -15,6 +14,5 @@ module.exports = {
   getKey,
   getDevScoreKey,
   getRepoScoreKey,
-  getCreatedAtKey,
   getEventLogKey
 };

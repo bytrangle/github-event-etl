@@ -1,7 +1,7 @@
 const redis = require('./client');
 const fs = require('fs');
 const path = require('path');
-const { getCreatedAtKey, getEventStreamKey, getEventLogKey } = require('./redis-key-generator');
+const { getEventStreamKey, getEventLogKey } = require('./redis-key-generator');
 
 const luaScript = fs.readFileSync(path.join(__dirname, 'insert-events-into-db.lua'), 'utf8');
 
@@ -71,11 +71,6 @@ fetchPublicEvents().then(async (res) => {
         console.error(`Error inserting event: ${event.id}: `, error.message)
       }
     }
-    
-    // Set the created-at key only if it does not exist yet - after all events are processed
-    await redis.set(getCreatedAtKey(), new Date().toISOString(), 'NX');
-    console.log('Created at key set successfully');
-    
   } catch (error) {
     console.error('Error processing events:', error);
   } finally {
