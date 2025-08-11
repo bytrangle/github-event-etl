@@ -32,7 +32,12 @@ function getDevScoreKey(date, hour) {
 // Get Unix timestamp for midnight of the next day
 function getNextMidnightUnixTimestamp() {
   const now = new Date();
-  const nextDay = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0);
+  const nextDay = new Date(Date.UTC(
+    now.getUTCFullYear(), 
+    now.getUTCMonth(), 
+    now.getUTCDate() + 1, 
+    0, 0, 0, 0
+  ));
   return Math.floor(nextDay.getTime() / 1000);
 }
 
