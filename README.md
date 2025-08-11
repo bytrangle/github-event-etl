@@ -36,7 +36,7 @@ A Node.js ETL (Extract, Transform, Load) pipeline for processing GitHub public e
 
 - `github-events:event-stream` - Redis stream containing all events
 - `github-events:event-log:{eventId}` - Event processing status with created_at timestamp
-- `github-events:dev-score:{YYYY-MM-DD-HH}` - Hourly developer activity scores
+- `github-events:contributor-score:{YYYY-MM-DD-HH}` - Hourly developer activity scores
 - `github-events:first-inserted-at` - Timestamp of first ETL run
 
 ### Event Stream Structure
@@ -145,7 +145,7 @@ XREAD COUNT 10 STREAMS github-events:event-stream 0
 
 ### Check Developer Scores (Current Hour)
 ```bash
-ZREVRANGE github-events:dev-score:2025-08-10-12 0 9 WITHSCORES
+ZREVRANGE github-events:contributor-score:2025-08-10-12 0 9 WITHSCORES
 ```
 
 ### View Event Processing Status
