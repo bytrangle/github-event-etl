@@ -136,7 +136,7 @@ The pipeline provides detailed logging:
 - Error messages with event IDs
 - Connection status
 
-## Redis Commands for Monitoring
+## Sample Redis Commands for Monitoring
 
 ### View Recent Events in Stream
 ```bash
@@ -146,11 +146,8 @@ XREAD COUNT 10 STREAMS github-events:event-stream 0
 ### Check Developer Scores (Current Hour)
 ```bash
 ZREVRANGE github-events:contributor-score:2025-08-10-12 0 9 WITHSCORES
-```
-
-### View Event Processing Status
-```bash
-GET github-events:event-log:{eventId}
+# Get top 10 highest scoring contributors for today
+ZRANGE github-events:contributor-score:2025-08-11:sum 0 9 REV WITHSCORES
 ```
 
 ### Stream Information
