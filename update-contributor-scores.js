@@ -29,6 +29,13 @@ function getDevScoreKey(date, hour) {
   return `github-events:contributor-score:${date}:${hour}`;
 }
 
+// Get Unix timestamp for midnight of the next day
+function getNextMidnightUnixTimestamp() {
+  const now = new Date();
+  const nextDay = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0);
+  return Math.floor(nextDay.getTime() / 1000);
+}
+
 // Check if actor is a bot based on login name patterns
 function isBotActor(login) {
   if (!login) return true; // Filter out null/undefined logins
@@ -101,6 +108,8 @@ async function processEventsFile(filePath, date, hour) {
   const pipeline = redis.pipeline();
   const batchSize = 1000; // Process in batches of 1000
   let batchCount = 0;
+  let keyExpirationSet = false; // Track if we've set expiration for this key
+  const expireAtTimestamp = getNextMidnightUnixTimestamp();
 
   for await (const line of rl) {
     try {
@@ -116,6 +125,13 @@ async function processEventsFile(filePath, date, hour) {
         if (actorLogin && !isBotActor(actorLogin)) {
           // Add to pipeline instead of executing immediately
           pipeline.zincrby(devScoreKey, 1, actorLogin);
+          
+          // Set expiration only once per key
+          if (!keyExpirationSet) {
+            pipeline.expireat(devScoreKey, expireAtTimestamp);
+            keyExpirationSet = true;
+          }
+          
           scoredCount++;
           batchCount++;
           
@@ -191,6 +207,10 @@ async function processGitHubArchive() {
 
         // Process events from the file
         const result = await processEventsFile(tempFilePath, today, hour);
+        // Set expiration AFTER processing is complete
+        const expireAtTimestamp = getNextMidnightUnixTimestamp();
+        await redis.expireat(devScoreKey, expireAtTimestamp);
+        console.log(`Set expiration for ${devScoreKey} at midnight`);
         totalProcessed += result.processedCount;
         totalScored += result.scoredCount;
 
@@ -224,8 +244,13 @@ async function processGitHubArchive() {
     const numKeys = hourlyKeys.length;
     await redis.zunionstore(summaryKey, numKeys, ...hourlyKeys);
     
+    // Set expiration for the summary key to midnight of next day
+    const summaryExpireAt = getNextMidnightUnixTimestamp();
+    await redis.expireat(summaryKey, summaryExpireAt);
+    
     console.log(`Created daily summary at key: ${summaryKey}`);
     console.log(`Combined ${numKeys} hourly score sets`);
+    console.log(`Summary key expires at: ${new Date(summaryExpireAt * 1000).toISOString()}`);
 
   } catch (error) {
     console.error('Error in main processing:', error.message);
