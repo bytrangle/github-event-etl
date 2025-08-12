@@ -251,11 +251,9 @@ async function processGitHubArchive() {
     
     // Set expiration for the summary key to midnight of next day
     const summaryExpireAt = getNextMidnightUnixTimestamp();
-    await redis.expireat(summaryKey, summaryExpireAt);
     
     console.log(`Created daily summary at key: ${summaryKey}`);
     console.log(`Combined ${numKeys} hourly score sets`);
-    console.log(`Summary key expires at: ${new Date(summaryExpireAt * 1000).toISOString()}`);
 
   } catch (error) {
     console.error('Error in main processing:', error.message);
