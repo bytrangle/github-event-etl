@@ -110,53 +110,54 @@ async function processEventsFile(filePath, date, hour) {
   let scoredCount = 0;
   
   // Create pipeline for batching Redis operations
-  const pipeline = redis.pipeline();
+  let pipeline = redis.pipeline();
   const batchSize = 1000; // Process in batches of 1000
   let batchCount = 0;
-  let keyExpirationSet = false; // Track if we've set expiration for this key
-  const expireAtTimestamp = getNextMidnightUnixTimestamp();
 
-  for await (const line of rl) {
-    try {
-      const event = JSON.parse(line);
-      processedCount++;
+  try {
+    for await (const line of rl) {
+      try {
+        const event = JSON.parse(line);
+        processedCount++;
 
-      // Check if event type is PushEvent or PullRequestEvent
-      if (event.type === 'PushEvent' || event.type === 'PullRequestEvent') {
-        // Get actor login name
-        const actorLogin = event.actor?.login;
-        
-        // Filter out bot actors
-        if (actorLogin && !isBotActor(actorLogin)) {
-          // Add to pipeline instead of executing immediately
-          pipeline.zincrby(devScoreKey, 1, actorLogin);
+        // Check if event type is PushEvent or PullRequestEvent
+        if (event.type === 'PushEvent' || event.type === 'PullRequestEvent') {
+          // Get actor login name
+          const actorLogin = event.actor?.login;
           
-          // Set expiration only once per key
-          if (!keyExpirationSet) {
-            pipeline.expireat(devScoreKey, expireAtTimestamp);
-            keyExpirationSet = true;
-          }
-          
-          scoredCount++;
-          batchCount++;
-          
-          // Execute pipeline when batch size is reached
-          if (batchCount >= batchSize) {
-            await pipeline.exec();
-            console.log(`Processed ${scoredCount} scoring events from ${filePath}`);
-            batchCount = 0;
+          // Filter out bot actors
+          if (actorLogin && !isBotActor(actorLogin)) {
+            // Add to pipeline instead of executing immediately
+            pipeline.zincrby(devScoreKey, 1, actorLogin);
+            
+            scoredCount++;
+            batchCount++;
+            
+            // Execute pipeline when batch size is reached
+            if (batchCount >= batchSize) {
+              await pipeline.exec();
+              console.log(`Processed ${scoredCount} scoring events from ${filePath}`);
+              
+              // Create new pipeline for next batch
+              pipeline = redis.pipeline();
+              batchCount = 0;
+            }
           }
         }
+      } catch (error) {
+        console.error(`Error parsing event line:`, error.message);
+        // Continue processing other lines
       }
-    } catch (error) {
-      console.error(`Error parsing event line:`, error.message);
-      // Continue processing other lines
     }
-  }
-  
-  // Execute remaining operations in pipeline
-  if (batchCount > 0) {
-    await pipeline.exec();
+    
+    // Execute remaining operations in pipeline
+    if (batchCount > 0) {
+      await pipeline.exec();
+    }
+  } finally {
+    // Ensure readline interface is properly closed
+    rl.close();
+    fileStream.destroy();
   }
 
   console.log(`Finished processing ${filePath}: ${processedCount} events, ${scoredCount} scored`);
