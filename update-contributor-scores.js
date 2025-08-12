@@ -186,6 +186,7 @@ async function processGitHubArchive() {
 
   let totalProcessed = 0;
   let totalScored = 0;
+  const newlyCreatedKeys = []; // Track newly created hourly keys
 
   try {
     // Process each hour from lastHour down to 0
@@ -216,6 +217,10 @@ async function processGitHubArchive() {
         const expireAtTimestamp = getNextMidnightUnixTimestamp();
         await redis.expireat(devScoreKey, expireAtTimestamp);
         console.log(`Set expiration for ${devScoreKey} at midnight`);
+        
+        // Track this as a newly created key
+        newlyCreatedKeys.push(devScoreKey);
+        
         totalProcessed += result.processedCount;
         totalScored += result.scoredCount;
 
@@ -238,22 +243,29 @@ async function processGitHubArchive() {
     // Create daily summary using ZUNIONSTORE
     console.log(`\n=== Creating Daily Summary ===`);
     const summaryKey = `github-events:contributor-score:${today}:sum`;
-    const hourlyKeys = [];
     
-    // Collect all hourly keys that were processed
-    for (let hour = 0; hour <= lastHour; hour++) {
-      hourlyKeys.push(getDevScoreKey(today, hour));
+    if (newlyCreatedKeys.length > 0) {
+      console.log(`Updating daily summary with ${newlyCreatedKeys.length} newly created keys`);
+      
+      // Check if summary key already exists
+      const summaryExists = await redis.exists(summaryKey);
+      
+      if (summaryExists) {
+        // Incremental update: combine existing summary with new keys
+        const keysToUnion = [summaryKey, ...newlyCreatedKeys];
+        await redis.zunionstore(summaryKey, keysToUnion.length, ...keysToUnion);
+        console.log(`Updated existing summary with ${newlyCreatedKeys.length} new hourly keys`);
+      } else {
+        // Create new summary from newly created keys only
+        await redis.zunionstore(summaryKey, newlyCreatedKeys.length, ...newlyCreatedKeys);
+        console.log(`Created new daily summary from ${newlyCreatedKeys.length} hourly keys`);
+      }
+      
+      console.log(`Daily summary key: ${summaryKey}`);
+      console.log(`Newly processed keys:`, newlyCreatedKeys);
+    } else {
+      console.log(`No new keys created - daily summary unchanged`);
     }
-    
-    // Use ZUNIONSTORE to combine all hourly scores
-    const numKeys = hourlyKeys.length;
-    await redis.zunionstore(summaryKey, numKeys, ...hourlyKeys);
-    
-    // Set expiration for the summary key to midnight of next day
-    const summaryExpireAt = getNextMidnightUnixTimestamp();
-    
-    console.log(`Created daily summary at key: ${summaryKey}`);
-    console.log(`Combined ${numKeys} hourly score sets`);
 
   } catch (error) {
     console.error('Error in main processing:', error.message);
